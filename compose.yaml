@@ -1,0 +1,30 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: solar_api
+      POSTGRES_USER: solar_api
+      POSTGRES_PASSWORD: local-development-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U solar_api -d solar_api"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://solar_api:local-development-only@database:5432/solar_api
+      JWT_SECRET: local-development-secret-change-before-production-12345
+      PBKDF2_ITERATIONS: 100000
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: slsea-solar-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health/ready
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: slsea-solar-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PBKDF2_ITERATIONS
+        value: "600000"
+
+databases:
+  - name: slsea-solar-db
+    plan: free
+    databaseName: solar_api
+    user: solar_api
