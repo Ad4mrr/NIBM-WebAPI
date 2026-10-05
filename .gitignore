@@ -1,0 +1,15 @@
+__pycache__/
+.DS_Store
+*.py[cod]
+*.sqlite3
+*.db
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+htmlcov/
+.env
+dist/
+build/
+*.egg-info/
+tmp/
