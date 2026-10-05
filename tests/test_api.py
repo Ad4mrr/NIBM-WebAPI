@@ -12,6 +12,12 @@ def test_health_and_openapi_are_public(client):
     assert "OAuth2PasswordBearer" in openapi.json()["components"]["securitySchemes"]
 
 
+def test_root_redirects_to_swagger(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
+
+
 def test_invalid_login_uses_error_contract(client):
     response = client.post(
         "/api/v1/auth/token",

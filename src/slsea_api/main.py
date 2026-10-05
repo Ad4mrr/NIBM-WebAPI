@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -67,6 +68,13 @@ def create_app() -> FastAPI:
         return DataEnvelope(data=HealthOut(status="ok"))
 
     app.include_router(api)
+
+    @app.get("/", include_in_schema=False)
+    def open_swagger() -> RedirectResponse:
+        """Make the local root URL convenient for students using a browser."""
+
+        return RedirectResponse(url="/docs")
+
     return app
 
 
