@@ -46,7 +46,8 @@ def test_collection_conditional_get_has_empty_304(client, national_headers):
     assert first.headers["etag"]
     cached = client.get(
         "/api/v1/provinces",
-        headers={**national_headers, "If-None-Match": first.headers["etag"]},
+        # Render may add W/ to an application-generated ETag.
+        headers={**national_headers, "If-None-Match": f"W/{first.headers['etag']}"},
     )
     assert cached.status_code == 304
     assert cached.content == b""
@@ -64,7 +65,8 @@ def test_catalog_create_location_patch_and_stale_precondition(client, admin_head
 
     updated = client.patch(
         created.headers["location"],
-        headers={**admin_headers, "If-Match": original_etag},
+        # A weak marker added by a deployment proxy must not hide the version.
+        headers={**admin_headers, "If-Match": f"W/{original_etag}"},
         json={"name": "Updated Province"},
     )
     assert updated.status_code == 200

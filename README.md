@@ -163,12 +163,3 @@ If Render gives the service the address
 
 Replace the example hostname if Render assigns a different one. The readiness
 endpoint must return HTTP 200 before the deployment is considered complete.
-
-
-
-
-
-Use [docs/API_DESIGN_GUIDE.md](docs/API_DESIGN_GUIDE.md) while learning the
-project. The report declaration requires the final report prose to be your own;
-the documentation here is study and evidence material, not a submission-ready
-report.
