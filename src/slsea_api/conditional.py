@@ -26,6 +26,18 @@ def content_etag(value: Any) -> str:
     return f'"sha256-{hashlib.sha256(encoded).hexdigest()}"'
 
 
+def normalize_etag(value: str) -> str:
+    """Remove a weak marker that an HTTPS proxy may add to an ETag.
+
+    Render's proxy can return ``W/"..."`` even when the application originally
+    sent ``"..."``. Normalizing that prefix lets clients send the deployed
+    response header back without changing the version value itself.
+    """
+
+    value = value.strip()
+    return value[2:] if value.startswith("W/") else value
+
+
 def http_date(value: datetime) -> str:
     if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
@@ -42,8 +54,10 @@ def check_not_modified(
 
     headers = {"ETag": etag, "Last-Modified": http_date(last_modified)}
     if_none_match = request.headers.get("if-none-match")
-    if if_none_match and etag in {tag.strip() for tag in if_none_match.split(",")}:
-        return Response(status_code=304, headers=headers)
+    if if_none_match:
+        supplied_etags = {normalize_etag(tag) for tag in if_none_match.split(",")}
+        if "*" in supplied_etags or normalize_etag(etag) in supplied_etags:
+            return Response(status_code=304, headers=headers)
 
     # HTTP dates have one-second precision, so compare after dropping microseconds.
     if not if_none_match and (if_modified_since := request.headers.get("if-modified-since")):
@@ -75,12 +89,12 @@ def require_matching_if_match(request: Request, current_etag: str) -> None:
     """Reject a stale optional If-Match precondition with HTTP 412."""
 
     supplied = request.headers.get("if-match")
-    if supplied and supplied != "*" and current_etag not in {
-        item.strip() for item in supplied.split(",")
-    }:
-        raise ApiError(
-            412,
-            "precondition_failed",
-            "The resource changed after the client retrieved it",
-            [{"field": "If-Match", "issue": "Retrieve the current resource and retry"}],
-        )
+    if supplied:
+        supplied_etags = {normalize_etag(item) for item in supplied.split(",")}
+        if "*" not in supplied_etags and normalize_etag(current_etag) not in supplied_etags:
+            raise ApiError(
+                412,
+                "precondition_failed",
+                "The resource changed after the client retrieved it",
+                [{"field": "If-Match", "issue": "Retrieve the current resource and retry"}],
+            )
