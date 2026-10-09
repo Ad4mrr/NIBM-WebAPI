@@ -112,29 +112,61 @@ contract.
 
 ## Docker and deployment
 
-Local PostgreSQL parity:
+### Run locally with Docker and PostgreSQL
+
+Docker Compose starts both the API and a PostgreSQL database:
 
 ```bash
 docker compose up --build
 ```
 
-`render.yaml` defines a Render web service and PostgreSQL database. In Render,
-create a Blueprint from the repository, wait for the first seed to complete,
-then verify `/docs`, `/openapi.json`, and `/api/v1/health/ready` over HTTPS.
+Open http://localhost:8000 after both containers are ready. The root address
+redirects to Swagger UI. The local Docker password in `compose.yaml` is only
+for development and is not used by the hosted application.
 
-Before submission, keep the deployed service awake if your plan sleeps,
-re-run the smoke checks, and share the Git repository with the module leader.
+### Deploy the API and database on Render
 
-## Where to study the important logic
+The repository is ready for deployment through the included `render.yaml` and
+`Dockerfile`. No production password, database URL, or `.env` file should be
+committed to GitHub.
 
-- `models.py`: entity relationships and append-only protection.
-- `security.py`: PBKDF2 hashing and JWT claims.
-- `dependencies.py`: operation scopes and jurisdiction claims.
-- `routers/catalog.py`: REST CRUD, Location, and If-Match.
-- `routers/readings.py`: device binding, filters, pagination, derived resources,
-  and district aggregation.
-- `conditional.py`: ETag, Last-Modified, 304, and 412 behavior.
-- `seed.py`: realistic dataset generation.
+1. Push the latest code to the GitHub repository.
+2. Sign in to [Render](https://render.com/) using GitHub.
+3. In the Render dashboard, choose **New > Blueprint**.
+4. Connect the GitHub repository and select its `main` branch.
+5. Render reads `render.yaml` and creates two resources:
+   - `slsea-solar-api`: the public FastAPI web service.
+   - `slsea-solar-db`: the private PostgreSQL database.
+6. Apply the Blueprint and wait for the first deployment to finish. The first
+   deployment takes longer because it creates and seeds 134,400 readings.
+7. Open the HTTPS URL assigned to `slsea-solar-api`.
+
+Render supplies the deployment settings declared in `render.yaml`:
+
+| Variable | Purpose |
+|---|---|
+| `APP_ENV=production` | Enables production configuration checks |
+| `DATABASE_URL` | Connects the API to the hosted PostgreSQL database |
+| `JWT_SECRET` | A generated secret used to sign access tokens |
+| `PBKDF2_ITERATIONS=600000` | Password-hashing work factor |
+
+The container runs `python scripts/seed.py` before starting Uvicorn. Seeding is
+idempotent, so a normal restart does not duplicate the sample data. The API
+listens on Render's `PORT` value and is exposed through HTTPS.
+
+If Render gives the service the address
+`https://slsea-solar-api.onrender.com`, check:
+
+- Swagger UI: `https://slsea-solar-api.onrender.com/docs`
+- OpenAPI JSON: `https://slsea-solar-api.onrender.com/openapi.json`
+- Readiness: `https://slsea-solar-api.onrender.com/api/v1/health/ready`
+
+Replace the example hostname if Render assigns a different one. The readiness
+endpoint must return HTTP 200 before the deployment is considered complete.
+
+
+
+
 
 Use [docs/API_DESIGN_GUIDE.md](docs/API_DESIGN_GUIDE.md) while learning the
 project. The report declaration requires the final report prose to be your own;
